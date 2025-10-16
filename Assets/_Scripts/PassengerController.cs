@@ -5,6 +5,7 @@ using DG.Tweening.Plugins.Options;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 
 public enum PassengerState
@@ -131,15 +132,13 @@ public class PassengerController : MonoBehaviour
         activeTween = transform
             .DOPath(path.ToArray(), duration, PathType.Linear) //PathType.CatmullRom
             .SetEase(Ease.Linear)
-            .SetLookAt(0.1f)
-            //.OnUpdate(() =>
-            //{
-            //    Vector3 dir = (activeTween.path.GetPoint(activeTween.ElapsedDirectionalPercentage()) - transform.position).normalized;
-            //    dir.y = 0; // Y eksenini sıfırla
-            //    if (dir != Vector3.zero)
-            //        transform.rotation = Quaternion.LookRotation(dir);
+            .SetLookAt(lookAhead: 0)
+            .OnUpdate(() =>
+            {
+                Vector3 e = transform.eulerAngles;
+                transform.rotation = Quaternion.Euler(0f, e.y, 0f);
 
-            //})
+            })
             .OnComplete(() =>
             {
                 animator.SetBool("IsMoving", false);
@@ -147,7 +146,6 @@ public class PassengerController : MonoBehaviour
                 EventBus.RaisePassengerStateChanged(this);
                 EventBus.RaisePassengerReachedTarget(this);
             });
-
     }
 
     private float CalculateDuration(List<Vector3> path)
