@@ -11,8 +11,6 @@ public class AnimationEventRelay : MonoBehaviour
     }
     public void OnHandAnimationFinishedForRelay()
     {
-        if (passenger != null)
-            passenger.OnHandAnimationFinished();
-        
+        Debug.Log("Bu artýk gereksiz bir script");
     }
 }
