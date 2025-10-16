@@ -92,6 +92,7 @@ public class PassengerManager : MonoBehaviour
         }
     }
 
+
     private void UpdateQueuePositions()
     {
         for (int i = 0; i < passengers.Count; i++)

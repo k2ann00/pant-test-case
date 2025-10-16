@@ -1,4 +1,8 @@
 ﻿using DG.Tweening;
+using DG.Tweening.Core;
+using DG.Tweening.Plugins.Core.PathCore;
+using DG.Tweening.Plugins.Options;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -104,10 +108,17 @@ public class PassengerController : MonoBehaviour
                 HasBaggage = false;
                 holder.AddBaggage(myBaggage);
                 myBaggage = null;
-                EventBus.RaisePassengerHandedBaggage(this);
+                animator.SetBool("HasBaggage", false);
+                StartCoroutine(WaitUntillBaggageReach());
             });
     }
     
+    private IEnumerator WaitUntillBaggageReach()
+    {
+        yield return new WaitForSeconds(1f);
+        EventBus.RaisePassengerHandedBaggage(this);
+    }
+
     public void StartWalkingPath(List<Vector3> path)
     {
         if (path == null || path.Count == 0) return;
@@ -118,9 +129,17 @@ public class PassengerController : MonoBehaviour
 
         float duration = CalculateDuration(path);
         activeTween = transform
-            .DOPath(path.ToArray(), duration, PathType.CatmullRom)
+            .DOPath(path.ToArray(), duration, PathType.Linear) //PathType.CatmullRom
             .SetEase(Ease.Linear)
             .SetLookAt(0.1f)
+            //.OnUpdate(() =>
+            //{
+            //    Vector3 dir = (activeTween.path.GetPoint(activeTween.ElapsedDirectionalPercentage()) - transform.position).normalized;
+            //    dir.y = 0; // Y eksenini sıfırla
+            //    if (dir != Vector3.zero)
+            //        transform.rotation = Quaternion.LookRotation(dir);
+
+            //})
             .OnComplete(() =>
             {
                 animator.SetBool("IsMoving", false);
@@ -128,6 +147,7 @@ public class PassengerController : MonoBehaviour
                 EventBus.RaisePassengerStateChanged(this);
                 EventBus.RaisePassengerReachedTarget(this);
             });
+
     }
 
     private float CalculateDuration(List<Vector3> path)
