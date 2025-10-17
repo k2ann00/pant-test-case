@@ -217,6 +217,7 @@ public class PassengerController : MonoBehaviour
             rb.MovePosition(transform.position + climbDir * 2.0f * Time.fixedDeltaTime);
             yield return new WaitForFixedUpdate();
         }
+        //transform.position = endPos;
 
         // Üste çıkınca
         rb.isKinematic = true;
@@ -225,6 +226,10 @@ public class PassengerController : MonoBehaviour
         EventBus.RaisePassengerReachedTarget(this);
     }
 
+    public void WalkingToXRay(List<Vector3> path)
+    {
+
+    }
 
     private float CalculateDuration(List<Vector3> path)
     {

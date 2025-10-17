@@ -13,7 +13,8 @@ public class PassengerManager : MonoBehaviour
     [SerializeField] private Vector3 queueDirection;
     [SerializeField] private float queueSpacing = 2f;
     [SerializeField] private Transform exitPoint;
-    [SerializeField] private Transform[] pathPoints;
+    [SerializeField] private Transform[] toStairsPathPoints;
+    [SerializeField] private Transform[] toXRayPathPoints;
     [SerializeField] private Transform[] stairSteps;
     [SerializeField] private bool hasStairs = true;
     [SerializeField] private List<PassengerController> passengers = new List<PassengerController>();
@@ -40,6 +41,7 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedTarget += OnPassengerReachedTarget;
         EventBus.PassengerStateChanged += OnPassengerStateChanged;
         EventBus.PassengerReachedStairs += OnPassengerReachedStairs;
+        EventBus.PassengerReachedStairs += OnPassengerReachedTopStairs;
     }
 
     
@@ -53,7 +55,10 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedTarget -= OnPassengerReachedTarget;
         EventBus.PassengerStateChanged -= OnPassengerStateChanged;
         EventBus.PassengerReachedStairs -= OnPassengerReachedStairs;
+        EventBus.PassengerReachedStairs -= OnPassengerReachedTopStairs;
     }
+
+    
 
     private void OnPlayerEnteredCircle()
     {
@@ -96,7 +101,12 @@ public class PassengerManager : MonoBehaviour
         passenger.StartClimbingRoutine();
     }
 
-
+    private void OnPassengerReachedTopStairs(PassengerController passenger)
+    {
+        Debug.Log($"{passenger.name} finished stairs. Going through XRay");
+        var path = GetPathForPassenger(passenger);
+        passenger.WalkingToXRay(path);
+    }
     private void OnPassengerReachedTarget(PassengerController passenger)
     {
         Log($"🚶 {passenger.name} left queue. Removing...");
@@ -136,7 +146,7 @@ public class PassengerManager : MonoBehaviour
     private List<Vector3> GetPathForPassenger(PassengerController passenger)
     {
         List<Vector3> path = new();
-        foreach (var point in pathPoints)
+        foreach (var point in toStairsPathPoints)
             path.Add(point.position);
         path.Add(exitPoint.position);
 

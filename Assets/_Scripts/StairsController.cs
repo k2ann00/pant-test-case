@@ -21,7 +21,6 @@ public class StairsController : MonoBehaviour
     {
         if (autoStart)
             StartMoving();
-        Debug.Log(steps.Count);
     }
 
     [ContextMenu("Start Moving")]
