@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using UnityEngine;
@@ -13,12 +14,16 @@ public class PassengerManager : MonoBehaviour
     [SerializeField] private float queueSpacing = 2f;
     [SerializeField] private Transform exitPoint;
     [SerializeField] private Transform[] pathPoints;
+    [SerializeField] private Transform[] stairSteps;
+    [SerializeField] private bool hasStairs = true;
     [SerializeField] private List<PassengerController> passengers = new List<PassengerController>();
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        EventBus.HasStairs = hasStairs;
     }
 
     private void Start()
@@ -33,7 +38,11 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedFront += OnPassengerReachedFront;
         EventBus.PassengerHandedBaggage += OnPassengerHandedBaggage;
         EventBus.PassengerReachedTarget += OnPassengerReachedTarget;
+        EventBus.PassengerStateChanged += OnPassengerStateChanged;
+        EventBus.PassengerReachedStairs += OnPassengerReachedStairs;
     }
+
+    
 
     private void OnDisable()
     {
@@ -42,6 +51,8 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedFront -= OnPassengerReachedFront;
         EventBus.PassengerHandedBaggage -= OnPassengerHandedBaggage;
         EventBus.PassengerReachedTarget -= OnPassengerReachedTarget;
+        EventBus.PassengerStateChanged -= OnPassengerStateChanged;
+        EventBus.PassengerReachedStairs -= OnPassengerReachedStairs;
     }
 
     private void OnPlayerEnteredCircle()
@@ -56,6 +67,11 @@ public class PassengerManager : MonoBehaviour
     private void OnPlayerExitedCircle()
     {
         Log("🔴 Player exited area.");
+    }
+
+    private void OnPassengerStateChanged(PassengerController passenger)
+    {
+        passenger.UpdateStateText();
     }
 
     private void OnPassengerReachedFront(PassengerController passenger)
@@ -73,6 +89,13 @@ public class PassengerManager : MonoBehaviour
         var path = GetPathForPassenger(passenger);
         passenger.StartWalkingPath(path);
     }
+
+    private void OnPassengerReachedStairs(PassengerController passenger)
+    {
+        Debug.Log($"🧗 {passenger.name} reached stairs. Starting climb...");
+        passenger.StartClimbingRoutine();
+    }
+
 
     private void OnPassengerReachedTarget(PassengerController passenger)
     {
@@ -116,6 +139,10 @@ public class PassengerManager : MonoBehaviour
         foreach (var point in pathPoints)
             path.Add(point.position);
         path.Add(exitPoint.position);
+
+        if (!hasStairs)
+            path.Add(exitPoint.position); // merdiven yoksa direkt çıkış
+
         return path;
     }
 

@@ -15,6 +15,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Debug Settings")]
     public bool IsGameInSlowMo = false;
+    public bool IsGameInFastMo = false;
     public bool ShowDetailedLogs = false;
 
     private void Awake()
@@ -39,6 +40,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (IsGameInSlowMo) Time.timeScale = 0.5f;
+        if (IsGameInFastMo) Time.timeScale = 3.0f;
     }
 
     

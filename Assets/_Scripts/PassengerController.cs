@@ -13,6 +13,7 @@ public enum PassengerState
     Waiting,
     HandingBaggage,
     WalkingToTarget,
+    Climbing,
     Done
 }
 
@@ -22,6 +23,8 @@ public class PassengerController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private Rigidbody rb;
     [SerializeField] private TextMeshPro stateText;
+    [SerializeField] private Transform firstStep; // Inspector'dan atanacak
+    [SerializeField] private Transform lastStep;  // Inspector'dan atanacak
 
     [Header("Baggage Settings")]
     [SerializeField] private GameObject myBaggage;
@@ -46,14 +49,10 @@ public class PassengerController : MonoBehaviour
     {
         animator = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody>();
+        rb.isKinematic = true;
         currentState = PassengerState.Waiting;
     }
 
-    private void Update()
-    {
-        if (stateText != null)
-            stateText.text = currentState.ToString();
-    }
 
     private void InitializeBaggage()
     {
@@ -130,7 +129,7 @@ public class PassengerController : MonoBehaviour
 
         float duration = CalculateDuration(path);
         activeTween = transform
-            .DOPath(path.ToArray(), duration, PathType.Linear) //PathType.CatmullRom
+            .DOPath(path.ToArray(), duration, PathType.CatmullRom) //PathType.CatmullRom
             .SetEase(Ease.Linear)
             .SetLookAt(lookAhead: 0)
             .OnUpdate(() =>
@@ -141,12 +140,91 @@ public class PassengerController : MonoBehaviour
             })
             .OnComplete(() =>
             {
+                //animator.SetBool("IsMoving", false);
+                //currentState = PassengerState.Done;
+                //EventBus.RaisePassengerStateChanged(this);
+                //EventBus.RaisePassengerReachedTarget(this);
                 animator.SetBool("IsMoving", false);
-                currentState = PassengerState.Done;
-                EventBus.RaisePassengerStateChanged(this);
-                EventBus.RaisePassengerReachedTarget(this);
+                // 🧩 Eğer path merdiven tabanında bitiyorsa tırmanma başlat
+                if (EventBus.HasStairs)
+                    EventBus.RaisePassengerReachedStairs(this);
+                else
+                    EventBus.RaisePassengerReachedTarget(this);
+
             });
     }
+
+    //public void StartClimbingRoutine(Transform[] steps)
+    //{
+    //    if (steps == null || steps.Length == 0) return;
+
+    //    currentState = PassengerState.Climbing;
+    //    EventBus.RaisePassengerStateChanged(this);
+    //    animator.SetBool("IsMoving", false);
+
+    //    rb.isKinematic = false; // Fizik devreye girsin
+    //    StartCoroutine(ClimbStepsRoutine(steps));
+    //}
+
+    //private IEnumerator ClimbStepsRoutine(Transform[] steps)
+    //{
+    //    float climbSpeed = 2f;
+    //    rb.isKinematic = true;
+    //    foreach (Transform step in steps)
+    //    {
+    //        Vector3 target = step.position + Vector3.up * 0.1f;
+    //        while (Vector3.Distance(transform.position, target) > 0.1f)
+    //        {
+    //            Debug.DrawLine(transform.position, target, Color.red);
+    //            Vector3 dir = (target - transform.position).normalized;
+    //            rb.MovePosition(transform.position + dir * climbSpeed * Time.fixedDeltaTime);
+    //            yield return new WaitForFixedUpdate();
+    //        }
+    //        yield return new WaitForSeconds(0.05f);
+    //    }
+
+    //    // Üste çıkınca
+    //    rb.isKinematic = true;
+    //    currentState = PassengerState.Done;
+    //    EventBus.RaisePassengerStateChanged(this);
+    //    EventBus.RaisePassengerReachedTarget(this);
+    //}
+
+
+    public void StartClimbingRoutine()
+    {
+        currentState = PassengerState.Climbing;
+        EventBus.RaisePassengerStateChanged(this);
+        animator.SetBool("IsMoving", false);
+
+        rb.isKinematic = false;
+        StartCoroutine(ClimbRoutine());
+    }
+
+    private IEnumerator ClimbRoutine()
+    {
+        rb.isKinematic = true;
+
+        Vector3 startPos = firstStep.position;
+        Vector3 endPos = lastStep.position;
+
+        // yön vektörü: merdiven boyunca yukarı doğru
+        Vector3 climbDir = (endPos - startPos).normalized;
+
+        while (Vector3.Distance(transform.position, endPos) > 0.1f)
+        {
+            Debug.DrawLine(transform.position, endPos);
+            rb.MovePosition(transform.position + climbDir * 2.0f * Time.fixedDeltaTime);
+            yield return new WaitForFixedUpdate();
+        }
+
+        // Üste çıkınca
+        rb.isKinematic = true;
+        currentState = PassengerState.Done;
+        EventBus.RaisePassengerStateChanged(this);
+        EventBus.RaisePassengerReachedTarget(this);
+    }
+
 
     private float CalculateDuration(List<Vector3> path)
     {
@@ -154,5 +232,11 @@ public class PassengerController : MonoBehaviour
         for (int i = 1; i < path.Count; i++)
             total += Vector3.Distance(path[i - 1], path[i]);
         return total / moveSpeed;
+    }
+
+    public void UpdateStateText()
+    {
+        if (stateText != null)
+            stateText.text = currentState.ToString();
     }
 }

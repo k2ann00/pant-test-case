@@ -2,12 +2,17 @@
 
 public static class EventBus
 {
+    public static bool HasStairs = false;
+
+
     public static event Action PlayerEnteredCircle;
     public static event Action PlayerExitedCircle;
     public static event Action<PassengerController> PassengerHandedBaggage;
     public static event Action<PassengerController> PassengerReachedTarget;
     public static event Action<PassengerController> PassengerStateChanged;
     public static event Action<PassengerController> PassengerReachedFront; // 🔹 eklendi
+    public static event Action<PassengerController> PassengerReachedStairs;
+
 
     public static bool IsPlayerInCircle { get; private set; } = false;
 
@@ -34,4 +39,7 @@ public static class EventBus
 
     public static void RaisePassengerReachedFront(PassengerController passenger)
         => PassengerReachedFront?.Invoke(passenger);
+
+    public static void RaisePassengerReachedStairs(PassengerController p)
+        => PassengerReachedStairs?.Invoke(p);
 }
