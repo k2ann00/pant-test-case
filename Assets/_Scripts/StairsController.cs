@@ -19,9 +19,12 @@ public class StairsController : MonoBehaviour
     void Awake () => Instance = this;
     private void Start()
     {
+
         if (autoStart)
             StartMoving();
     }
+
+ 
 
     [ContextMenu("Start Moving")]
     public void StartMoving()

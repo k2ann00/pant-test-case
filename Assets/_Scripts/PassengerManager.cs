@@ -1,7 +1,8 @@
-﻿using System;
+﻿using DG.Tweening;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DG.Tweening;
 using UnityEngine;
 
 public class PassengerManager : MonoBehaviour
@@ -13,11 +14,16 @@ public class PassengerManager : MonoBehaviour
     [SerializeField] private Vector3 queueDirection;
     [SerializeField] private float queueSpacing = 2f;
     [SerializeField] private Transform exitPoint;
+    [SerializeField] private bool hasStairs = true;
+    [SerializeField] private Transform xrayQueueStart;
+    [SerializeField] private Vector3 xrayQueueDirection;
     [SerializeField] private Transform[] toStairsPathPoints;
     [SerializeField] private Transform[] toXRayPathPoints;
+    [SerializeField] private Transform[] upperQueuePoints;
     [SerializeField] private Transform[] stairSteps;
-    [SerializeField] private bool hasStairs = true;
     [SerializeField] private List<PassengerController> passengers = new List<PassengerController>();
+    private List<PassengerController> xrayQueue = new();
+
 
     private void Awake()
     {
@@ -41,10 +47,12 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedTarget += OnPassengerReachedTarget;
         EventBus.PassengerStateChanged += OnPassengerStateChanged;
         EventBus.PassengerReachedStairs += OnPassengerReachedStairs;
-        EventBus.PassengerReachedStairs += OnPassengerReachedTopStairs;
+        EventBus.PassengerReachedTopStairs += OnPassengerReachedTopStairs;
+        EventBus.PassengerReachedXRayEnd += OnPassengerReachedXRayEnd;
+        EventBus.PassengerReachedUpperQueue += OnPassengerReachedUpperQueue;
     }
 
-    
+
 
     private void OnDisable()
     {
@@ -55,19 +63,33 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedTarget -= OnPassengerReachedTarget;
         EventBus.PassengerStateChanged -= OnPassengerStateChanged;
         EventBus.PassengerReachedStairs -= OnPassengerReachedStairs;
-        EventBus.PassengerReachedStairs -= OnPassengerReachedTopStairs;
+        EventBus.PassengerReachedTopStairs -= OnPassengerReachedTopStairs;
+        EventBus.PassengerReachedXRayEnd -= OnPassengerReachedXRayEnd;
+        EventBus.PassengerReachedUpperQueue -= OnPassengerReachedUpperQueue;
     }
 
-    
+
 
     private void OnPlayerEnteredCircle()
     {
         if (passengers.Count > 0)
         {
             Log($"🟢 Player entered area. Activating first passenger: {passengers[0].name}");
-            passengers[0].MoveToFront(GetQueuePosition(0));
+            ActivateNextPassenger();
+
+            //passengers[0].MoveToFront(GetQueuePosition(0));
         }
     }
+    private void ActivateNextPassenger()
+    {
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+        {
+            var next = passengers[0];
+            Debug.Log($"🎯 Next passenger: {next.name}");
+            next.MoveToFront(GetQueuePosition(0));
+        }
+    }
+
 
     private void OnPlayerExitedCircle()
     {
@@ -90,10 +112,22 @@ public class PassengerManager : MonoBehaviour
 
     private void OnPassengerHandedBaggage(PassengerController passenger)
     {
-        Log($"🧳 {passenger.name} handed baggage. Walking to exit.");
-        var path = GetPathForPassenger(passenger);
-        passenger.StartWalkingPath(path);
+        Log($"🧳 {passenger.name} handed baggage. Walking to stairs.");
+
+        // Mevcut passenger’ı ToStairsPath’e yönlendir
+        passenger.StartWalkingPathGeneric(GetPathForType(PassengerPathType.ToStairs), PassengerPathType.ToStairs);
+
+        // Diğerleri sırada bir adım öne gelsin
+        StartCoroutine(UpdateQueueAfterDelay(0.5f));
     }
+
+    private IEnumerator UpdateQueueAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        UpdateQueuePositions();
+    }
+
+
 
     private void OnPassengerReachedStairs(PassengerController passenger)
     {
@@ -103,10 +137,47 @@ public class PassengerManager : MonoBehaviour
 
     private void OnPassengerReachedTopStairs(PassengerController passenger)
     {
-        Debug.Log($"{passenger.name} finished stairs. Going through XRay");
-        var path = GetPathForPassenger(passenger);
-        passenger.WalkingToXRay(path);
+        Debug.Log($"🧗 {passenger.name} finished climbing. Going to XRay path...");
+        passenger.rb.isKinematic = true;
+
+        // XRay path'ini al ve kontrol et
+        List<Vector3> xrayPath = GetPathForType(PassengerPathType.ToXRay);
+
+        if (xrayPath == null || xrayPath.Count == 0)
+        {
+            Debug.LogError($"❌ {passenger.name} - ToXRay path is EMPTY! Check toXRayPathPoints in Inspector.");
+            return;
+        }
+
+        Debug.Log($"✅ {passenger.name} - XRay path has {xrayPath.Count} points. Starting walk...");
+        passenger.StartWalkingPathGeneric(xrayPath, PassengerPathType.ToXRay);
     }
+
+
+    private void OnPassengerReachedXRayEnd(PassengerController passenger)
+    {
+        Debug.Log($"{passenger.name} finished XRay path. Moving to upper queue position...");
+
+        // PermanentOrder indexine göre xrayQueueStart + direction + spacing kullanarak sıralama
+        int permanentIndex = passenger.PermanentOrder;
+        Vector3 targetPos = GetXRayQueuePosition(permanentIndex);
+
+        // ✅ DOPath için minimum 2 nokta gerekli (mevcut + hedef)
+        List<Vector3> pathToQueue = new List<Vector3>
+        {
+            passenger.transform.position,  // Başlangıç
+            targetPos                       // Hedef
+        };
+
+        Debug.Log($"🚶 {passenger.name} walking to upper queue | Distance: {Vector3.Distance(passenger.transform.position, targetPos)}");
+
+        passenger.StartWalkingPathGeneric(
+            pathToQueue,
+            PassengerPathType.ToUpperQueue
+        );
+    }
+
+
     private void OnPassengerReachedTarget(PassengerController passenger)
     {
         Log($"🚶 {passenger.name} left queue. Removing...");
@@ -125,17 +196,97 @@ public class PassengerManager : MonoBehaviour
         }
     }
 
+    private void OnPassengerReachedUpperQueue(PassengerController passenger)
+    {
+        Debug.Log($"✅ {passenger.name} reached upper queue. Waiting...");
+
+        passenger.rb.isKinematic = true;
+        passenger.currentState = PassengerState.Waiting;
+        EventBus.RaisePassengerStateChanged(passenger);
+
+        // Bir sonraki passenger’ı erken başlat
+        StartCoroutine(ActivateNextPassengerWithDelay(0.7f, passenger));
+
+    }
+
+    private IEnumerator ActivateNextPassengerWithDelay(float delay, PassengerController finished)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (passengers.Contains(finished))
+            passengers.Remove(finished);
+
+        UpdateQueuePositions();
+
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+            ActivateNextPassenger();
+
+    }
+
 
     private void UpdateQueuePositions()
     {
         for (int i = 0; i < passengers.Count; i++)
         {
             var p = passengers[i];
+
+            // ✅ Sadece Waiting state'deki yolcuları güncelle (yürüyenlerle çakışma olmasın)
+            if (p.currentState != PassengerState.Waiting)
+            {
+                Debug.Log($"⏭️ Skipping {p.name} - State: {p.currentState}");
+                continue;
+            }
+
             p.QueueIndex = i;
             p.transform
                 .DOMove(GetQueuePosition(i), 0.5f)
                 .SetEase(Ease.OutQuad);
         }
+    }
+    private void AddToXRayQueue(PassengerController passenger)
+    {
+        if (!xrayQueue.Contains(passenger))
+            xrayQueue.Add(passenger);
+
+        xrayQueue = xrayQueue.OrderBy(p => p.PermanentOrder).ToList();
+
+        for (int i = 0; i < xrayQueue.Count; i++)
+        {
+            var p = xrayQueue[i];
+            Vector3 targetPos = GetXRayQueuePosition(i);
+            p.QueueIndex = i;
+            p.currentState = PassengerState.WalkingToTarget;
+            p.rb.isKinematic = true;
+            EventBus.RaisePassengerStateChanged(p);
+            p.transform
+                .DOMove(targetPos, 0.6f)
+                .SetDelay(i * 0.2f)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+                    p.currentState = PassengerState.Waiting;
+                    EventBus.RaisePassengerStateChanged(p);
+
+                    if (p == passenger)
+                        OnPassengerFinishedFullCycle(p);
+                });
+        }
+    }
+
+    private void OnPassengerFinishedFullCycle(PassengerController passenger)
+    {
+        // Yolcuyu ana sıradan çıkar
+        passengers.Remove(passenger);
+        UpdateQueuePositions();
+
+        // 🔹 Sonraki yolcuyu başlat
+        ActivateNextPassenger();
+    }
+
+
+    private Vector3 GetXRayQueuePosition(int index)
+    {
+        return xrayQueueStart.position+ (xrayQueueDirection.normalized * queueSpacing * index);
     }
 
     private Vector3 GetQueuePosition(int index)
@@ -146,15 +297,66 @@ public class PassengerManager : MonoBehaviour
     private List<Vector3> GetPathForPassenger(PassengerController passenger)
     {
         List<Vector3> path = new();
-        foreach (var point in toStairsPathPoints)
-            path.Add(point.position);
-        path.Add(exitPoint.position);
+        if (toStairsPathPoints != null)
+        {
+            foreach (var point in toStairsPathPoints)
+                path.Add(point.position);
+            path.Add(exitPoint.position);
 
-        if (!hasStairs)
-            path.Add(exitPoint.position); // merdiven yoksa direkt çıkış
+            if (!hasStairs)
+                path.Add(exitPoint.position); // merdiven yoksa direkt çıkış
+        }
+
+        else if (toXRayPathPoints != null)
+        {
+            foreach (var point in toXRayPathPoints)
+                path.Add(point.position);
+            path.Add(exitPoint.position);
+        }
+            return path;
+    }
+
+
+    private void MovePassengerAlongPath(PassengerController passenger, PassengerPathType pathType)
+    {
+        List<Vector3> path = GetPathForType(pathType);
+        passenger.StartWalkingPathGeneric(path, pathType);
+    }
+
+    private List<Vector3> GetPathForType(PassengerPathType pathType)
+    {
+        List<Vector3> path = new();
+
+        switch (pathType)
+        {
+            case PassengerPathType.ToStairs:
+                if (toStairsPathPoints != null)
+                    foreach (var p in toStairsPathPoints)
+                        path.Add(p.position);
+                break;
+
+            case PassengerPathType.ToXRay:
+                if (toXRayPathPoints != null)
+                    foreach (var p in toXRayPathPoints)
+                        path.Add(p.position);
+                break;
+
+            case PassengerPathType.ToUpperQueue:
+                if (upperQueuePoints != null)
+                    foreach (var p in upperQueuePoints)
+                        path.Add(p.position);
+                break;
+
+            case PassengerPathType.ToExit:
+                if (exitPoint != null)
+                    path.Add(exitPoint.position);
+                break;
+        }
 
         return path;
     }
+
+
 
     private void SortTheQueue()
     {
@@ -162,10 +364,13 @@ public class PassengerManager : MonoBehaviour
         {
             var p = passengers[i];
             p.QueueIndex = i;
+            p.SetPermanentOrder(i); // 🔹 yeni fonksiyon
             p.transform.position = GetQueuePosition(i);
             p.transform.rotation = Quaternion.Euler(startRotOffset);
         }
     }
+
+
 
     private void Log(string msg)
     {
