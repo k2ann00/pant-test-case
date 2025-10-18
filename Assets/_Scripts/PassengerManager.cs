@@ -133,6 +133,33 @@ public class PassengerManager : MonoBehaviour
     {
         Debug.Log($"🧗 {passenger.name} reached stairs. Starting climb...");
         passenger.StartClimbingRoutine();
+
+        // ✅ Climbing başladığında bir sonraki passenger'ı tetikle
+        if (passengers.Contains(passenger))
+        {
+            passengers.Remove(passenger);
+            Debug.Log($"🔄 {passenger.name} removed from queue. Remaining: {passengers.Count}");
+
+            // ✅ Kuyruğu güncelle - diğerleri öne kayar ve index güncellenir
+            UpdateQueuePositions();
+
+            // ✅ Kuyruk güncellemesi bittikten sonra bir sonraki passenger'ı tetikle
+            if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+            {
+                StartCoroutine(ActivateNextAfterQueueUpdate());
+            }
+        }
+    }
+
+    private IEnumerator ActivateNextAfterQueueUpdate()
+    {
+        yield return new WaitForSeconds(0.6f); // UpdateQueuePositions DOMove süresi 0.5s
+
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+        {
+            Debug.Log($"🎯 Activating next passenger: {passengers[0].name}");
+            ActivateNextPassenger();
+        }
     }
 
     private void OnPassengerReachedTopStairs(PassengerController passenger)
@@ -204,24 +231,10 @@ public class PassengerManager : MonoBehaviour
         passenger.currentState = PassengerState.Waiting;
         EventBus.RaisePassengerStateChanged(passenger);
 
-        // Bir sonraki passenger’ı erken başlat
-        StartCoroutine(ActivateNextPassengerWithDelay(0.7f, passenger));
-
+        // ✅ Sonraki passenger zaten OnPassengerReachedStairs'da tetiklendi
+        // Burada tekrar tetiklemeye gerek yok
     }
 
-    private IEnumerator ActivateNextPassengerWithDelay(float delay, PassengerController finished)
-    {
-        yield return new WaitForSeconds(delay);
-
-        if (passengers.Contains(finished))
-            passengers.Remove(finished);
-
-        UpdateQueuePositions();
-
-        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
-            ActivateNextPassenger();
-
-    }
 
 
     private void UpdateQueuePositions()
