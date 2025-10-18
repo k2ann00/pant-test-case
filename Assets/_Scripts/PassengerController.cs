@@ -34,7 +34,7 @@ public class PassengerController : MonoBehaviour
     [SerializeField] private TextMeshPro stateText;
     [SerializeField] private Transform firstStep; // Inspector'dan atanacak
     [SerializeField] private Transform lastStep;  // Inspector'dan atanacak
-    [SerializeField] private bool IsPassengerReachedTopEsc = false;
+    [SerializeField] private bool IsPassengerReachedTopEscalator = false;
 
     [Header("Baggage Settings")]
     [SerializeField] private GameObject myBaggage;
@@ -263,7 +263,10 @@ public class PassengerController : MonoBehaviour
     //    EventBus.RaisePassengerStateChanged(this);
     //    EventBus.RaisePassengerReachedTopStairs(this);
     //}
-
+    public Vector3 GetLastStepPosition()
+    {
+        return lastStep.position;
+    }
     private IEnumerator ClimbRoutine()
     {
         currentState = PassengerState.Climbing;
@@ -277,7 +280,7 @@ public class PassengerController : MonoBehaviour
         Debug.Log($"🧗 [{name}] CLIMB START | From: {startPos} → To: {endPos} | Distance: {Vector3.Distance(startPos, endPos)}");
 
         float timer = 0f;
-        while (!IsPassengerReachedTopEsc)
+        while (!IsPassengerReachedTopEscalator)
         {
             // Merdiven boyunca hareket - rb.MovePosition kullan
             Vector3 climbDir = (endPos - rb.position).normalized;
@@ -319,7 +322,6 @@ public class PassengerController : MonoBehaviour
         currentState = PassengerState.WalkingToTarget;
         EventBus.RaisePassengerStateChanged(this);
 
-        Debug.Log($"✅ [{name}] CLIMB COMPLETE | Final Position: {rb.position}");
         EventBus.RaisePassengerReachedTopStairs(this);
 
         climbCoroutine = null;
@@ -380,7 +382,7 @@ public class PassengerController : MonoBehaviour
         if (other.CompareTag("EscalatorEndPoint"))
         {
             Debug.Log($"{name} reached escalator top");
-            IsPassengerReachedTopEsc = true;
+            IsPassengerReachedTopEscalator = true;
         }
     }
 }

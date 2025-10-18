@@ -16,7 +16,7 @@ public class PlayerBaggageHolder : MonoBehaviour
         baggage.transform.localRotation = Quaternion.Euler(0, 0, 90); // ✨
         bags.Add(baggage);
     }
-
+    
 
     public GameObject RemoveBaggage()
     {

@@ -1,15 +1,25 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
+/// <summary>
+/// WaitingAreaController - Tag-based circle detection with visual feedback
+/// Not: PlayerCircleChecker ile aynı işi yapar + SpriteRenderer renk değiştirme
+/// </summary>
 [RequireComponent(typeof(Collider))]
 public class WaitingAreaController : MonoBehaviour
 {
     private SpriteRenderer spriteRenderer;
+    private CircleType circleType;
 
     private void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer != null)
             spriteRenderer.color = Color.red;
+
+        // Tag'den CircleType parse et
+        circleType = ParseCircleTypeFromTag();
+        Debug.Log($"✅ [{name}] WaitingAreaController initialized as: {circleType}");
     }
 
     private void OnTriggerEnter(Collider other)
@@ -19,7 +29,7 @@ public class WaitingAreaController : MonoBehaviour
             if (spriteRenderer != null)
                 spriteRenderer.color = Color.green;
 
-            EventBus.RaisePlayerEnteredCircle();
+            EventBus.RaisePlayerEnteredCircle(circleType);
         }
     }
 
@@ -30,7 +40,18 @@ public class WaitingAreaController : MonoBehaviour
             if (spriteRenderer != null)
                 spriteRenderer.color = Color.red;
 
-            EventBus.RaisePlayerExitedCircle();
+            EventBus.RaisePlayerExitedCircle(circleType);
         }
+    }
+
+    private CircleType ParseCircleTypeFromTag()
+    {
+        if (Enum.TryParse<CircleType>(gameObject.tag, out CircleType result))
+        {
+            return result;
+        }
+
+        Debug.LogWarning($"[{name}] Unknown tag '{gameObject.tag}', defaulting to WelcomingCircle");
+        return CircleType.WelcomingCircle;
     }
 }

@@ -23,6 +23,8 @@ public class PassengerManager : MonoBehaviour
     [SerializeField] private Transform[] stairSteps;
     [SerializeField] private List<PassengerController> passengers = new List<PassengerController>();
     private List<PassengerController> xrayQueue = new();
+    public Vector3 lastStepPos;
+    private CircleType currentCircleType;
 
 
     private void Awake()
@@ -36,6 +38,7 @@ public class PassengerManager : MonoBehaviour
     private void Start()
     {
         SortTheQueue();
+        lastStepPos = passengers[0].GetLastStepPosition();
     }
 
     private void OnEnable()
@@ -51,8 +54,6 @@ public class PassengerManager : MonoBehaviour
         EventBus.PassengerReachedXRayEnd += OnPassengerReachedXRayEnd;
         EventBus.PassengerReachedUpperQueue += OnPassengerReachedUpperQueue;
     }
-
-
 
     private void OnDisable()
     {
@@ -70,19 +71,22 @@ public class PassengerManager : MonoBehaviour
 
 
 
-    private void OnPlayerEnteredCircle()
+    private void OnPlayerEnteredCircle(CircleType circleType)
     {
-        if (passengers.Count > 0)
-        {
-            Log($"🟢 Player entered area. Activating first passenger: {passengers[0].name}");
-            ActivateNextPassenger();
+        // Sadece WelcomingCircle için passenger sistemini çalıştır
+        if (circleType != CircleType.WelcomingCircle)
+            return;
+        currentCircleType = circleType;
 
-            //passengers[0].MoveToFront(GetQueuePosition(0));
+        if (passengers.Count > 0 && circleType == CircleType.WelcomingCircle)
+        {
+            Log($"🟢 Player entered WelcomingCircle. Activating first passenger: {passengers[0].name}");
+            ActivateNextPassenger();
         }
     }
     private void ActivateNextPassenger()
     {
-        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle && currentCircleType == CircleType.WelcomingCircle)
         {
             var next = passengers[0];
             Debug.Log($"🎯 Next passenger: {next.name}");
@@ -91,9 +95,13 @@ public class PassengerManager : MonoBehaviour
     }
 
 
-    private void OnPlayerExitedCircle()
+    private void OnPlayerExitedCircle(CircleType circleType)
     {
-        Log("🔴 Player exited area.");
+        // Sadece WelcomingCircle için log
+        if (circleType == CircleType.WelcomingCircle)
+        {
+            Log("🔴 Player exited WelcomingCircle.");
+        }
     }
 
     private void OnPassengerStateChanged(PassengerController passenger)
@@ -127,7 +135,7 @@ public class PassengerManager : MonoBehaviour
         UpdateQueuePositions();
     }
 
-
+    
 
     private void OnPassengerReachedStairs(PassengerController passenger)
     {
@@ -144,7 +152,7 @@ public class PassengerManager : MonoBehaviour
             UpdateQueuePositions();
 
             // ✅ Kuyruk güncellemesi bittikten sonra bir sonraki passenger'ı tetikle
-            if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+            if (passengers.Count > 0 && EventBus.IsPlayerInCircle && currentCircleType == CircleType.WelcomingCircle)
             {
                 StartCoroutine(ActivateNextAfterQueueUpdate());
             }
@@ -155,7 +163,7 @@ public class PassengerManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.6f); // UpdateQueuePositions DOMove süresi 0.5s
 
-        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle && currentCircleType == CircleType.WelcomingCircle)
         {
             Debug.Log($"🎯 Activating next passenger: {passengers[0].name}");
             ActivateNextPassenger();
@@ -212,7 +220,7 @@ public class PassengerManager : MonoBehaviour
         passengers.Remove(passenger);
         UpdateQueuePositions();
 
-        if (passengers.Count > 0 && EventBus.IsPlayerInCircle)
+        if (passengers.Count > 0 && EventBus.IsPlayerInCircle && currentCircleType == CircleType.WelcomingCircle)
         {
             Log($"🎯 Next passenger: {passengers[0].name}");
             passengers[0].MoveToFront(GetQueuePosition(0));

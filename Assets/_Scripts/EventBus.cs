@@ -1,34 +1,66 @@
 ﻿using System;
+using UnityEngine;
 
+/// <summary>
+/// Circle türlerini tanımlayan enum
+/// </summary>
+public enum CircleType
+{
+    WelcomingCircle,    // Passenger bagaj teslimi
+    BaggageUnload,      // Bagaj boşaltma - X-Ray'e
+    BaggageXray,        // X-Ray işlemi
+    PassengerXray       // Passenger X-Ray kontrol
+}
+
+/// <summary>
+/// Event-Driven mimari için merkezi event sistemi
+/// SOLID: Single Responsibility - Sadece event yönetimi
+/// </summary>
 public static class EventBus
 {
     public static bool HasStairs = false;
 
+    // ========== Circle Events (Tag-based) ==========
+    public static event Action<CircleType> PlayerEnteredCircle;
+    public static event Action<CircleType> PlayerExitedCircle;
 
-    public static event Action PlayerEnteredCircle;
-    public static event Action PlayerExitedCircle;
+    // ========== Passenger Events ==========
     public static event Action<PassengerController> PassengerHandedBaggage;
     public static event Action<PassengerController> PassengerReachedTarget;
     public static event Action<PassengerController> PassengerStateChanged;
-    public static event Action<PassengerController> PassengerReachedFront; // 🔹 eklendi
+    public static event Action<PassengerController> PassengerReachedFront;
     public static event Action<PassengerController> PassengerReachedStairs;
     public static event Action<PassengerController> PassengerReachedTopStairs;
     public static event Action<PassengerController> PassengerReachedXRayEnd;
     public static event Action<PassengerController> PassengerReachedUpperQueue;
 
+    // ========== Baggage Events ==========
+    public static event Action<GameObject> BaggageReachedUnloadEnd;
+    public static event Action<GameObject> BaggageReachedPlatform;
+    public static event Action<GameObject> BaggageReachedTruck;
+    public static event Action<GameObject> BaggageCompletedXray; // X-Ray yolunu tamamladı
 
+    // ========== Platform Events ==========
+    public static event Action PlatformReachedTop;    // Platform en üst noktaya ulaştı
+    public static event Action PlatformReachedBottom; // Platform en alt noktaya ulaştı
+
+    // ========== State Tracking ==========
     public static bool IsPlayerInCircle { get; private set; } = false;
+    public static CircleType? CurrentCircleType { get; private set; } = null;
 
-    public static void RaisePlayerEnteredCircle()
+    // ========== Circle Event Raisers ==========
+    public static void RaisePlayerEnteredCircle(CircleType circleType)
     {
         IsPlayerInCircle = true;
-        PlayerEnteredCircle?.Invoke();
+        CurrentCircleType = circleType;
+        PlayerEnteredCircle?.Invoke(circleType);
     }
 
-    public static void RaisePlayerExitedCircle()
+    public static void RaisePlayerExitedCircle(CircleType circleType)
     {
         IsPlayerInCircle = false;
-        PlayerExitedCircle?.Invoke();
+        CurrentCircleType = null;
+        PlayerExitedCircle?.Invoke(circleType);
     }
 
     public static void RaisePassengerHandedBaggage(PassengerController passenger)
@@ -53,5 +85,25 @@ public static class EventBus
     => PassengerReachedXRayEnd?.Invoke(p);
 
     public static void RaisePassengerReachedUpperQueue(PassengerController p)
-    => PassengerReachedUpperQueue?.Invoke(p);
+        => PassengerReachedUpperQueue?.Invoke(p);
+
+    // ========== Baggage Event Raisers ==========
+    public static void RaiseBaggageReachedUnloadEnd(GameObject baggage)
+        => BaggageReachedUnloadEnd?.Invoke(baggage);
+
+    public static void RaiseBaggageReachedPlatform(GameObject baggage)
+        => BaggageReachedPlatform?.Invoke(baggage);
+
+    public static void RaiseBaggageReachedTruck(GameObject baggage)
+        => BaggageReachedTruck?.Invoke(baggage);
+
+    public static void RaiseBaggageCompletedXray(GameObject baggage)
+        => BaggageCompletedXray?.Invoke(baggage);
+
+    // ========== Platform Event Raisers ==========
+    public static void RaisePlatformReachedTop()
+        => PlatformReachedTop?.Invoke();
+
+    public static void RaisePlatformReachedBottom()
+        => PlatformReachedBottom?.Invoke();
 }

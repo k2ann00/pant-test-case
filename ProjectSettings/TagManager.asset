@@ -6,6 +6,11 @@ TagManager:
   tags:
   - PlayerBaggageHolder
   - EscalatorEndPoint
+  - EscalatorStartPoint
+  - WelcomingCircle
+  - BaggageUnload
+  - BaggageXray
+  - PassengerXray
   layers:
   - Default
   - TransparentFX
