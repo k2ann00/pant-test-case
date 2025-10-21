@@ -1,3 +1,13 @@
+# Developer Links
+
+LinkedIn - [Kaan Avdan](https://www.linkedin.com/in/kaanavdan/)   ||   Portfolio - [Kaan Avdan](https://linktr.ee/k2ann00)
+
+#
+<p float="left">
+  <img src="https://raw.githubusercontent.com/k2ann00/pant-test-case/main/Assets/Sprite/Logo-BG.png" width="200" />
+  <img src="https://raw.githubusercontent.com/k2ann00/pant-test-case/main/Assets/Sprite/Outlined-Icon-Photoroom.png" width="100" />
+</p>
+
 # Panteon Playable Ad Case - Complete Project Documentation
 
 ## 📋 Table of Contents
