@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(git checkout:*)",
+      "Bash(for file in Assets/_Scripts/{PlatformMover,BaggageUnloadManager,BaggageMover,BaggageStack,BaggageTruck,PlayerCircleChecker,WaitingAreaController,BaggageXrayManager,BaggageXrayMover}.cs)",
+      "Bash(do)",
+      "Bash([ -f \"$file\" ])",
+      "Bash(perl -i -pe:*)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(mkdir:*)",
+      "Bash(for file in GameManager.cs BaggageUnloadManager.cs BaggageXrayManager.cs PaintingManager.cs PassengerManager.cs PassengerManagerCOP.cs MoneyStackManager.cs PassengerPool.cs)",
+      "Bash(do [ -f \"$file\" ])",
+      "Bash(mv:*)",
+      "Bash(for file in CameraController.cs JoystickController.cs PlayerController.cs PassengerController.cs PassengerControllerCOP.cs PaintInputController.cs ArrowMarkController.cs DirectionArrowManager.cs WaitingAreaController.cs StairsController.cs EscalatorTrigger.cs)",
+      "Bash(for file in PaintingUI.cs BarFill.cs)",
+      "Bash(for file in EventBus.cs ObjectPool.cs AnimationEventRelay.cs BoardSurface.cs UnlockableArea.cs PlayerCircleChecker.cs Transfers.cs)",
+      "Bash(for file in BaggageMover.cs BaggageStack.cs BaggageTruck.cs BaggageXrayMover.cs MoneyMover.cs PlayerBaggageHolder.cs PassengerXrayManager.cs)",
+      "Bash(tree:*)",
+      "Bash(awk:*)",
+      "Bash(sort:*)",
+      "Bash(git add:*)",
+      "Bash(for file in Controllers/*.cs Managers/*.cs Helpers/*.cs Models/*.cs UI/*.cs)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Read(//d/UnityProjects/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
